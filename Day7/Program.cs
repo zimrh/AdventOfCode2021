@@ -9,11 +9,13 @@ namespace Day7
         public static void Main(string[] args)
         {
             var crabsFilePath = "crabs.txt";
-            var fuelCost = GetFuelCostForOptimalPosition(crabsFilePath);
-            Console.WriteLine($"Cheapest Fuel Cost {fuelCost}");
+            var fuelCostConstantRate = GetFuelCostForOptimalPosition(crabsFilePath, true);
+            Console.WriteLine($"Cheapest Fuel Cost {fuelCostConstantRate}");
+            var fuelCostNonConstantRate = GetFuelCostForOptimalPosition(crabsFilePath);
+            Console.WriteLine($"Cheapest Fuel Cost {fuelCostNonConstantRate}");
         }
 
-        private static int GetFuelCostForOptimalPosition(string crabsFilePath)
+        private static int GetFuelCostForOptimalPosition(string crabsFilePath, bool constantFuelExpense = false)
         {
             var crabDepths = new List<int>();
             var crabsFile = File.ReadAllText(crabsFilePath);
@@ -39,7 +41,17 @@ namespace Day7
                 var levelFuelCost = 0;
                 foreach (var crabDepth in crabDepths)
                 {
-                    var fuelCost = (crabDepth > depth) ? crabDepth - depth : depth - crabDepth;
+                    var fuelCost = 0;
+                    if (constantFuelExpense)
+                    {
+                        fuelCost = (crabDepth > depth) ? crabDepth - depth : depth - crabDepth;
+                    }
+                    else
+                    {
+                        var diff = (crabDepth > depth) ? crabDepth - depth : depth - crabDepth;
+                        fuelCost = (diff * diff  + diff) / 2;
+                    }
+                    
                     levelFuelCost += fuelCost;
                 }
 

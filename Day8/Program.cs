@@ -56,7 +56,7 @@ namespace Day8
                 var line = displayDataFile.ReadLine();
                 var inputs = line.Split("|").First().Trim();
                 var decoder = new SegmentDecoder(inputs);
-                
+
                 var outputs = line.Split("|").Last().Trim();
 
                 Console.WriteLine($"outputs: {outputs}");
@@ -66,15 +66,15 @@ namespace Day8
                     number = string.Concat(number, decoder.GetNumbersFromCode(output));
                 }
                 Console.WriteLine($"Number: {number}");
-                
+
                 numbersTotal += int.Parse(number);
 
                 Console.WriteLine($"Total: {numbersTotal}");
 
             } while (!displayDataFile.EndOfStream);
-            
+
             displayDataFile.Close();
-            
+
             return numbersTotal;
         }
 
@@ -86,7 +86,7 @@ namespace Day8
         {
             var inputs = inputsRaw.Split(" ", StringSplitOptions.RemoveEmptyEntries);
             var knownNumbers = new string[10];
-            var segmentCount = new Dictionary<char, int> {{'a',0},{'b',0},{'c',0},{'d',0},{'e',0},{'f',0},{'g',0}};
+            var segmentCount = new Dictionary<string, int> { { "a", 0 }, { "b", 0 }, { "c", 0 }, { "d", 0 }, { "e", 0 }, { "f", 0 }, { "g", 0 } };
 
             foreach (var input in inputs)
             {
@@ -95,94 +95,75 @@ namespace Day8
 
                 foreach (var segmentLight in segment)
                 {
-                    segmentCount[segmentLight]++;
+                    segmentCount[segmentLight.ToString()]++;
                 }
 
-                var len = segment.Length;
-
-                switch (len)
+                var lenToKnownNumber = new Dictionary<int, int>
                 {
-                    case 2: // 1 Segment
-                        knownNumbers[1] = segment;
-                        break;
-                    case 4: // 4 Segment
-                        knownNumbers[4] = segment;
-                        break;
-                    case 3: // 7 Segment
-                        knownNumbers[7] = segment;
-                        break;
-                    case 7: // 8 Segment
-                        knownNumbers[8] = segment;
-                        break;
+                    {2, 1}, // 2 Len = 1 Segment
+                    {4, 4}, // 4 Len = 4 Segment
+                    {3, 7}, // 3 Len = 7 Segment
+                    {7, 8}  // 7 Len = 8 Segment
+                };
+
+                if (lenToKnownNumber.ContainsKey(segment.Length))
+                {
+                    knownNumbers[lenToKnownNumber[segment.Length]] = segment;
                 }
             }
 
-            var topSegment = knownNumbers[7];
+            Top = knownNumbers[7];
             foreach (var lightSegment in knownNumbers[1])
             {
-                topSegment = topSegment.Replace(lightSegment.ToString(), "");
+                Top = Top.Replace(lightSegment.ToString(), "");
             }
-            TopSegment = topSegment[0];
 
             foreach (var (key, count) in segmentCount)
             {
                 switch (count)
                 {
-                    case 4:
-                        BottomLeftSegment = key;
-                        break;
-
-                    case 6:
-                        TopLeftSegment = key;
-                        break;
-
-                    case 8:
-                        if (key != TopSegment)
+                    case 4: BottomLeft = key; break;
+                    case 6: TopLeft = key; break;
+                    case 8: 
+                        if (key != Top)
                         {
-                            TopRightSegment = key;
+                            TopRight = key;
                         }
                         break;
-
-                    case 9:
-                        BottomRightSegment = key;
-                        break;
+                    case 9: BottomRight = key; break;
                 }
             }
 
-            var middleSegment = knownNumbers[4]
-                .Replace(TopLeftSegment.ToString(),"")
-                .Replace(TopRightSegment.ToString(), "")
-                .Replace(BottomRightSegment.ToString(), "");
+            Middle = knownNumbers[4]
+                .Replace(TopLeft, "")
+                .Replace(TopRight, "")
+                .Replace(BottomRight, "");
 
-            MiddleSegment = middleSegment[0];
+            Bottom = knownNumbers[8]
+                .Replace(BottomLeft, "")
+                .Replace(BottomRight, "")
+                .Replace(Middle, "")
+                .Replace(TopLeft, "")
+                .Replace(TopRight, "")
+                .Replace(Top, "");
 
-            var bottomSegment = knownNumbers[8]
-                .Replace(BottomLeftSegment.ToString(), "")
-                .Replace(BottomRightSegment.ToString(), "")
-                .Replace(MiddleSegment.ToString(), "")
-                .Replace(TopLeftSegment.ToString(), "")
-                .Replace(TopRightSegment.ToString(), "")
-                .Replace(TopSegment.ToString(), "");
+            knownNumbers[0] = string.Concat(Top, TopRight, TopLeft,
+                                            BottomLeft, BottomRight, Bottom);
 
-            BottomSegment = bottomSegment[0];
+            knownNumbers[2] = string.Concat(Top, TopRight, Middle,
+                                            BottomLeft, Bottom);
 
-            knownNumbers[0] = string.Concat(TopSegment, TopRightSegment, TopLeftSegment,
-                                            BottomLeftSegment, BottomRightSegment, BottomSegment);
+            knownNumbers[3] = string.Concat(Top, TopRight, Middle,
+                                            BottomRight, Bottom);
 
-            knownNumbers[2] = string.Concat(TopSegment, TopRightSegment, MiddleSegment,
-                                            BottomLeftSegment, BottomSegment);
+            knownNumbers[5] = string.Concat(Top, TopLeft, Middle,
+                                            BottomRight, Bottom);
 
-            knownNumbers[3] = string.Concat(TopSegment, TopRightSegment, MiddleSegment,
-                                            BottomRightSegment, BottomSegment);
-            
-            knownNumbers[5] = string.Concat(TopSegment, TopLeftSegment, MiddleSegment,
-                                            BottomRightSegment, BottomSegment);
+            knownNumbers[6] = string.Concat(Top, TopLeft, Middle,
+                                            BottomLeft, BottomRight, Bottom);
 
-            knownNumbers[6] = string.Concat(TopSegment, TopLeftSegment, MiddleSegment,
-                                            BottomLeftSegment, BottomRightSegment, BottomSegment);
-
-            knownNumbers[9] = string.Concat(TopSegment, TopRightSegment, TopLeftSegment, MiddleSegment,
-                                            BottomRightSegment, BottomSegment);
+            knownNumbers[9] = string.Concat(Top, TopRight, TopLeft, 
+                                            Middle, BottomRight, Bottom);
 
             for (var i = 0; i < knownNumbers.Length; i++)
             {
@@ -198,12 +179,12 @@ namespace Day8
         }
 
         public Dictionary<string, int> NumberLookupDictionary = new Dictionary<string, int>();
-        public char BottomLeftSegment;
-        public char BottomRightSegment;
-        public char BottomSegment;
-        public char MiddleSegment;
-        public char TopLeftSegment;
-        public char TopRightSegment;
-        public char TopSegment;
+        public string BottomLeft;
+        public string BottomRight;
+        public string Bottom;
+        public string Middle;
+        public string TopLeft;
+        public string TopRight;
+        public string Top;
     }
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,15 +10,91 @@ namespace Day9
     {
         public static void Main(string[] args)
         {
+            var test1 = new Coordinates(1, 0);
+            var test2 = new Coordinates(1, 0);
+            
             var heightMapTestFilePath = "height-map-test.txt";
             var heightMapFilePath = "height-map.txt";
+
             var lowPointRiskTestScore = GetLowPointsRiskScore(heightMapTestFilePath);
-            Console.WriteLine($"Low Points Risk Score: {lowPointRiskTestScore}");
+            Console.WriteLine($"Test Low Points Risk Score: {lowPointRiskTestScore}");
             var lowPointRiskScore = GetLowPointsRiskScore(heightMapFilePath);
             Console.WriteLine($"Low Points Risk Score: {lowPointRiskScore}");
+
+            var basinSizingScoreTest = GetBasinSizingScore(heightMapTestFilePath);
+            Console.WriteLine($"Test Basin Size Score: {basinSizingScoreTest}");
+            var basinSizingScore = GetBasinSizingScore(heightMapFilePath);
+            Console.WriteLine($"Basin Size Score: {basinSizingScore}");
+        }
+
+        private static int GetBasinSizingScore(string heightMapFilePath)
+        {
+            var floor = ExtractFloorMap(heightMapFilePath);
+            var lowPoints = GetLowPoints(floor);
+            var basins = GetBasins(floor, lowPoints);
+            var topThreeBasins = basins.Select(b => b.Count).OrderByDescending(c => c).Take(3).ToList();
+            return topThreeBasins.Aggregate(1, (current, i1) => current * i1);
+        }
+
+        private static List<List<Coordinates>> GetBasins(List<List<int>> floor, List<Coordinates> lowPoints)
+        {
+            var basins = lowPoints
+                .Select(point => 
+                    new List<Coordinates>
+                    {
+                        point
+                    }).ToList();
+
+            foreach (var basin in basins)
+            {
+                var pointsFound = new List<string>
+                {
+                    basin.First().ToString()
+                };
+                var allPointsFound = false;
+
+                do
+                {
+                    var coordinatesToAdd = new List<Coordinates>();
+                    allPointsFound = true;
+                    foreach (var coordinate in basin)
+                    {
+                        foreach (var direction in (Direction[]) Enum.GetValues(typeof(Direction)))
+                        {
+                            var newCoordinate = coordinate.Move(direction);
+                            if (newCoordinate.IsOutOfBounds(floor.Count, floor[0].Count))
+                            {
+                                continue;
+                            }
+
+                            var height = floor[newCoordinate.X][newCoordinate.Y];
+
+                            if (pointsFound.Contains(newCoordinate.ToString()) || height == 9)
+                            {
+                                continue;
+                            }
+
+                            allPointsFound = false;
+                            pointsFound.Add(newCoordinate.ToString());
+                            coordinatesToAdd.Add(newCoordinate);
+                        }
+                    }
+                    basin.AddRange(coordinatesToAdd);
+                } while (!allPointsFound);
+                
+            }
+
+            return basins;
         }
 
         private static int GetLowPointsRiskScore(string heightMapFilePath)
+        {
+            var floor = ExtractFloorMap(heightMapFilePath);
+            var lowPoints = GetLowPoints(floor);
+            return lowPoints.Sum(p => floor[p.X][p.Y] + 1);
+        }
+
+        private static List<List<int>> ExtractFloorMap(string heightMapFilePath)
         {
             var floor = new List<List<int>>();
 
@@ -36,7 +113,12 @@ namespace Day9
                 row++;
             } while (!heightMapFile.EndOfStream);
 
-            var lowPoints = new List<int>();
+            return floor;
+        }
+
+        private static List<Coordinates> GetLowPoints(List<List<int>> floor)
+        {
+            var lowPoints = new List<Coordinates>();
 
             for (var x = 0; x < floor.Count(); x++)
             {
@@ -56,8 +138,6 @@ namespace Day9
 
                         var value = floor[newCoord.X][newCoord.Y];
 
-                        Console.WriteLine($"{currentHeight} | {value}");
-
                         if (currentHeight >= value)
                         {
                             lowest = false;
@@ -66,37 +146,51 @@ namespace Day9
 
                     if (lowest)
                     {
-                        lowPoints.Add(currentHeight);
+                        lowPoints.Add(coordinate);
                     }
-                    Console.WriteLine();
-
                 }
             }
-
-            return lowPoints.Sum() + lowPoints.Count;
+            return lowPoints;
         }
-
 
     }
 
     internal class Coordinates
     {
-        public Coordinates()
-        {
-        }
-
         public Coordinates(int x, int y)
         {
             X = x;
             Y = y;
         }
 
-        public int X { get; set; }
-        public int Y { get; set; }
+        public int X { get; }
+        public int Y { get; }
 
         public bool IsOutOfBounds(int height, int width)
         {
             return X < 0 || X >= height || Y < 0 || Y >= width;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj.GetType() == GetType() && Equals((Coordinates) obj);
+        }
+
+        protected bool Equals(Coordinates other)
+        {
+            return X == other.X && Y == other.Y;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(X, Y);
+        }
+
+        public override string ToString()
+        {
+            return $"{X}:{Y}";
         }
 
         public Coordinates Move(Direction direction) => direction switch

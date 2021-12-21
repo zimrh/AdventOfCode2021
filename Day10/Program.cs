@@ -25,7 +25,7 @@ namespace Day10
 
         private static double GetRepairScore(string syntaxInputFilePath)
         {
-            var syntaxInputFile = File.OpenText(syntaxInputFilePath);
+            using var syntaxInputFile = File.OpenText(syntaxInputFilePath);
             var repairPoints = new Dictionary<char, int>
             {
                 {')', 1},
@@ -53,6 +53,8 @@ namespace Day10
                             => (5 * current) + repairPoints[character]));
             } while (!syntaxInputFile.EndOfStream);
 
+            syntaxInputFile.Close();
+
             var mid = scores.Count / 2;
 
             return scores.OrderBy(s => s).Skip(mid).Take(1).LastOrDefault();
@@ -60,7 +62,8 @@ namespace Day10
         
         private static int GetSyntaxErrorScore(string syntaxInputFilePath)
         {
-            var syntaxInputFile = File.OpenText(syntaxInputFilePath);
+            using var syntaxInputFile = File.OpenText(syntaxInputFilePath);
+
             var errorPoints = new Dictionary<string, int>
             {
                 {")", 3},
@@ -86,6 +89,8 @@ namespace Day10
                 }
             } while (!syntaxInputFile.EndOfStream);
             
+            syntaxInputFile.Close();
+
             return invalidBracketCount.Sum(
                 bracketCount => bracketCount.Value * errorPoints[bracketCount.Key]);
         }

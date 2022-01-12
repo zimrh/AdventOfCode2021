@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -11,102 +10,110 @@ namespace Day14
     {
         public static void Main(string[] args)
         {
-            var testDataFilePath = "test-polymer.txt";
-            var dataFilePath = "polymer.txt";
 
-            var testPolymer = GetPolymer(testDataFilePath);
+            // Refer to the README.md for this one! Was caught out by exponential growth the first time!
+
+            var dataFilePath = "polymer.txt";
+            var testDataFilePath = "test-polymer.txt";
+
+            var polymer = Polymer.NewPolymerFromFile(dataFilePath);
+            var testPolymer = Polymer.NewPolymerFromFile(testDataFilePath);
+
             var grownTestPolymer = GrowPolymer(testPolymer, 10);
-            var testPolymerScore = AnalyzePolymer(grownTestPolymer);
+            var testPolymerScore = AnalyzePolymerPairings(grownTestPolymer);
             Console.WriteLine($"Test Polymer Score: {testPolymerScore}");
 
-            
-            var polymer = GetPolymer(dataFilePath);
+            var testLargePolymerPairings = GrowPolymer(testPolymer, 40);
+            var testLargePolymerScore = AnalyzePolymerPairings(testLargePolymerPairings);
+            Console.WriteLine($"Large Test Polymer Score: {testLargePolymerScore}");
+
             var grownPolymer = GrowPolymer(polymer, 10);
-            var polymerScore = AnalyzePolymer(grownPolymer);
+            var polymerScore = AnalyzePolymerPairings(grownPolymer);
             Console.WriteLine($"Polymer Score: {polymerScore}");
 
+            var largePolymerPairings = GrowPolymer(polymer, 40);
+            var largePolymerScore = AnalyzePolymerPairings(largePolymerPairings);
+            Console.WriteLine($"Large Polymer Score: {largePolymerScore}");
         }
 
-        private static int AnalyzePolymer(string polymer)
+        private static ulong AnalyzePolymerPairings(Dictionary<string, ulong> pairings)
         {
-            var elementCount = new Dictionary<char, int>();
-            foreach (var element in polymer)
+            var elementCount = new Dictionary<char, ulong>();
+            foreach (var (pair, value) in pairings)
             {
-                if (!elementCount.ContainsKey(element))
+                foreach (var element in pair)
                 {
-                    elementCount.Add(element, 0);
-                }
+                    if (!elementCount.ContainsKey(element))
+                    {
+                        elementCount.Add(element, 0);
+                    }
 
-                elementCount[element]++;
+                    elementCount[element] += value;
+                }
             }
 
-            var ordered = elementCount.OrderBy(e => e.Value);
-            return ordered.Last().Value - ordered.First().Value;
+            foreach (var (key, value) in elementCount)
+            {
+                elementCount[key] = value / 2;
+            }
+
+            var ordered = elementCount.OrderByDescending(e => e.Value).ToList();
+            return  ordered.First().Value - ordered.Last().Value;
         }
 
-        private static Polymer GetPolymer(string polymerInstructionsFilePath)
+        private static Dictionary<string, ulong> GrowPolymer(Polymer polymer, int stepCount)
         {
-            using var polymerInstructionsFile = File.OpenText(polymerInstructionsFilePath);
+            var pairings = new Dictionary<string, ulong>();
 
-            var polymer = new Polymer()
+            for (var i = 0; i <= polymer.Template.Length - Polymer.PairingInsertionRuleLength; i++)
             {
-                Template = polymerInstructionsFile.ReadLine()
-            };
-
-            polymerInstructionsFile.ReadLine();
-
-            do
-            {
-                var pairing = polymerInstructionsFile.ReadLine();
-                var split = pairing.Split(" -> ", StringSplitOptions.RemoveEmptyEntries);
-                
-                if (split.Length != 2) continue;
-
-                polymer.PairingInsertionRules.Add(split.First(), split.Last());
-
-            } while (!polymerInstructionsFile.EndOfStream);
-
-            polymerInstructionsFile.Close();
-
-            return polymer;
-        }
-
-        private static string GrowPolymer(Polymer polymer, int stepCount)
-        {
-            var step = 0;
-
-            var currentTemplate = new StringBuilder(polymer.Template);
-
-            do
-            {
-                var nextTemplate = new StringBuilder();
-                var sw = Stopwatch.StartNew();
-
-                for (var i = 0; i <= currentTemplate.Length - Polymer.PairingInsertionRuleLength; i++)
+                var pair = polymer.Template.Substring(i, Polymer.PairingInsertionRuleLength);
+                if (!pairings.ContainsKey(pair))
                 {
-                    var pair = currentTemplate.ToString(i, Polymer.PairingInsertionRuleLength);
-                    nextTemplate.Append(pair[0]);
-                    nextTemplate.Append(polymer.PairingInsertionRules[pair]);
+                    pairings.Add(pair, 0);
                 }
 
-                nextTemplate.Append(currentTemplate[^1]);
-                sw.Stop();
-                Console.WriteLine($"Step {step + 1}: Done in {sw.Elapsed}");
+                pairings[pair]++;
+            }
 
-                currentTemplate = nextTemplate;
+            var step = 0;
+            
+            do
+            {
+                var nextPairings = new Dictionary<string, ulong>();
+
+                foreach (var (key, value) in pairings)
+                {
+                    var newLetter = polymer.PairingInsertionRules[key];
+
+                    var newPairs = new []
+                    {
+                        key[0] + newLetter,
+                        newLetter + key[1]
+                    };
+
+                    foreach (var newPair in newPairs)
+                    {
+                        if (!nextPairings.ContainsKey(newPair))
+                        {
+                            nextPairings.Add(newPair, 0);
+                        }
+
+                        nextPairings[newPair] += value;
+                        
+                    }
+                }
+
+                pairings = nextPairings;
 
                 step++;
             } while (step < stepCount);
 
-            return currentTemplate.ToString();
+            var firstAndLastElements = $"{polymer.Template.First()}{polymer.Template.Last()}";
+            pairings[firstAndLastElements]++;
+
+            return pairings;
         }
 
-
-        internal class Polymer
-        {
-            public const int PairingInsertionRuleLength = 2;
-            public string Template { get; set; }
-            public Dictionary<string, string> PairingInsertionRules { get; set; } = new Dictionary<string, string>();
-        }
     }
 }
